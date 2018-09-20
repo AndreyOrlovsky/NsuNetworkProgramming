@@ -11,7 +11,7 @@ namespace UdpMulticast
 {
     class Program
     {
-        private const int port = 41000;
+        private const int port = 42000;
         private static readonly Guid myGuid = Guid.NewGuid();
 
         private static IPAddress multicastGroup = IPAddress.Parse("235.5.5.11"); //default
@@ -19,7 +19,7 @@ namespace UdpMulticast
 
         private static readonly UdpClient udpSender = null;
         private static readonly UdpClient udpReceiver = null;
-        private static readonly IPEndPoint groupEndPoint = new IPEndPoint(multicastGroup, port);
+        private static IPEndPoint groupEndPoint = null;
         private static IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, port);
         private static IPEndPoint remoteEndPoint = null;
 
@@ -47,19 +47,47 @@ namespace UdpMulticast
 
         public static void Main(string[] args)
         {
-            udpSender.JoinMulticastGroup(multicastGroup, timeToLive: 1);
+            try
+            {
+                if (args.Length > 0)
+                {
+                    multicastGroup = IPAddress.Parse(args[0]);
+                    groupEndPoint = new IPEndPoint(multicastGroup, port);
 
-            Thread thread = new Thread(TrackCondition);
-            thread.Start();
+                }
 
-            SendMessageToGroup("add");
+                udpSender.JoinMulticastGroup(multicastGroup, timeToLive: 1);
 
-            Console.WriteLine("Press any key to exit...");
-            Console.ReadKey();
+                Thread thread = new Thread(TrackCondition);
+                thread.Start();
 
-            SendMessageToGroup("remove"); 
+                SendMessageToGroup("add");
 
-            Environment.Exit(0);
+                Console.WriteLine("Press any key to exit...");
+                Console.ReadKey();
+
+                SendMessageToGroup("remove");
+
+                Environment.Exit(0);
+            }
+
+            catch (FormatException e)
+            {
+                Console.WriteLine("Exception occured: " + e);
+                Console.WriteLine($"{args[0]} is not a correct IP address.");
+            }
+
+            catch (ArgumentException e)
+            {
+                Console.WriteLine("Exception occured: " + e);
+                Console.WriteLine($"{args[0]} should have been in range from 224.0.0.0 to 239.255.255.255.");
+            }
+
+            finally
+            {
+                udpSender.Dispose();
+                udpReceiver.Dispose();
+            }
 
 
         }
@@ -79,7 +107,7 @@ namespace UdpMulticast
                 string request = message[0];
                 Guid remoteGuid = Guid.Parse(message[1]);
 
-                if (request == "add" && remoteEndPoint.Address.Equals(localIP) && !trackedSelf)
+                if (request == "add" && remoteGuid.Equals(myGuid) && !trackedSelf)
                 {
                     trackedSelf = true;
                     Console.WriteLine(string.Join("\n", GetJoinMessage(remoteGuid), CopiesCountMessage, CopiesListing, delimiters));
