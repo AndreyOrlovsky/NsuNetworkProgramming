@@ -79,9 +79,14 @@ namespace UdpMulticast
                 string request = message[0];
                 Guid remoteGuid = Guid.Parse(message[1]);
 
-                if (request == "add" && !(remoteEndPoint.Address.Equals(localIP) && trackedSelf))
+                if (request == "add" && remoteEndPoint.Address.Equals(localIP) && !trackedSelf)
                 {
                     trackedSelf = true;
+                    Console.WriteLine(string.Join("\n", GetJoinMessage(remoteGuid), CopiesCountMessage, CopiesListing, delimiters));
+                }
+
+                else if (request == "add" && !copies.ContainsKey(remoteGuid))
+                {
                     copies[remoteGuid] = remoteEndPoint.Address;
                     SendMessageToGroup("add"); //извещаем новую копию о себе
                     Console.WriteLine(string.Join("\n", GetJoinMessage(remoteGuid), CopiesCountMessage, CopiesListing, delimiters));
