@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -17,11 +18,11 @@ namespace UdpMulticast
         private static IPAddress multicastGroup = IPAddress.Parse("235.5.5.11"); //default
         private static IPAddress localIP = GetLocalIP();
 
-        private static readonly UdpClient udpSender = null;
-        private static readonly UdpClient udpReceiver = null;
-        private static IPEndPoint groupEndPoint = null;
+        private static readonly UdpClient udpSender;
+        private static readonly UdpClient udpReceiver;
+        private static IPEndPoint groupEndPoint;
         private static IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, port);
-        private static IPEndPoint remoteEndPoint = null;
+        private static IPEndPoint remoteEndPoint;
 
         private static Dictionary<Guid, IPAddress> copies = new Dictionary<Guid, IPAddress>() { [myGuid] = localIP };
 
@@ -30,7 +31,7 @@ namespace UdpMulticast
         private static string CopiesCountMessage => $"There are {copies.Count} copies active now! Here are them:";
         private static string CopiesListing => string.Join("\n", copies.Select(copy => $"{copy.Key} {copy.Value}"));
         private const string delimiters = "--------------------------------";
-        private static bool trackedSelf = false;
+        private static bool trackedSelf;
 
         static Program()
         {
@@ -47,21 +48,31 @@ namespace UdpMulticast
 
         public static void Main(string[] args)
         {
+
             try
             {
                 if (args.Length > 0)
                 {
                     multicastGroup = IPAddress.Parse(args[0]);
-                    groupEndPoint = new IPEndPoint(multicastGroup, port);
 
                 }
 
+                groupEndPoint = new IPEndPoint(multicastGroup, port);
                 udpSender.JoinMulticastGroup(multicastGroup, timeToLive: 1);
 
-                Thread thread = new Thread(TrackCondition);
-                thread.Start();
+               // не работает при закрытии консоли
+               // Process.GetCurrentProcess().Exited += (sender, eventArgs) => { SendMessageToGroup("remove"); };
 
-                SendMessageToGroup("add");
+                Thread receive = new Thread(TrackCondition);
+                receive.Start();
+
+                Thread.Sleep(500);
+
+                Thread send = new Thread(() => { SendMessageToGroup("add"); });
+                send.Start();
+
+
+
 
                 Console.WriteLine("Press any key to exit...");
                 Console.ReadKey();
@@ -73,14 +84,15 @@ namespace UdpMulticast
 
             catch (FormatException e)
             {
-                Console.WriteLine("Exception occured: " + e);
-                Console.WriteLine($"{args[0]} is not a correct IP address.");
+                Console.WriteLine("Exception occured: " + e.Message);
+                Console.WriteLine($"{args[0]} is not even an IP address. " +
+                                  $"1st parameter to program should be in range from 224.0.0.0 to 239.255.255.255.");
             }
 
-            catch (ArgumentException e)
+            catch (SocketException e)
             {
-                Console.WriteLine("Exception occured: " + e);
-                Console.WriteLine($"{args[0]} should have been in range from 224.0.0.0 to 239.255.255.255.");
+                Console.WriteLine("Exception occured: " + e.Message);
+                Console.WriteLine($"{args[0]} should be in range from 224.0.0.0 to 239.255.255.255.");
             }
 
             finally
@@ -134,7 +146,7 @@ namespace UdpMulticast
             IPAddress localIP;
             using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Unspecified))
             {
-                socket.Connect("1.1.1.1", 65535);
+                socket.Connect("1.1.1.1", port: 65535);
                 localIP = ((IPEndPoint)socket.LocalEndPoint).Address;
             }
 
