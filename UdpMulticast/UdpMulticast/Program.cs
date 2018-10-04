@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -16,22 +17,29 @@ namespace UdpMulticast
         private static readonly Guid myGuid = Guid.NewGuid();
 
         private static IPAddress multicastGroup = IPAddress.Parse("235.5.5.11"); //default
-        private static IPAddress localIP = GetLocalIP();
 
         private static readonly UdpClient udpSender;
         private static readonly UdpClient udpReceiver;
         private static IPEndPoint groupEndPoint;
         private static IPEndPoint localEndPoint = new IPEndPoint(IPAddress.Any, port);
         private static IPEndPoint remoteEndPoint;
+        private static ConcurrentDictionary<Guid, IPAddress> copies = new ConcurrentDictionary<Guid, IPAddress>();
+        private static ConcurrentDictionary<Guid, int> timeouts = new ConcurrentDictionary<Guid, int>();
 
-        private static Dictionary<Guid, IPAddress> copies = new Dictionary<Guid, IPAddress>() { [myGuid] = localIP };
 
-        private static string GetJoinMessage(Guid guid) => $"New copy has joined the group {multicastGroup.ToString()}! It's GUID: {guid.ToString()}.";
-        private static string GetLeaveMessage(Guid guid) => $"A copy with GUID {guid.ToString()} has left the group {multicastGroup.ToString()}.";
-        private static string CopiesCountMessage => $"There are {copies.Count} copies active now! Here are them:";
-        private static string CopiesListing => string.Join("\n", copies.Select(copy => $"{copy.Key} {copy.Value}"));
+        private static string GetJoinMessage(Guid guid)
+            => $"New copy has joined the group {multicastGroup.ToString()}! It's GUID: {guid.ToString()}.";
+        private static string GetLeaveMessage(Guid guid)
+            => $"A copy with GUID {guid.ToString()} has left the group {multicastGroup.ToString()}.";
+        private static string CopiesCountMessage
+            => $"There are {copies.Count} copies active now! Here are them:";
+        private static string CopiesListing
+            => string.Join("\n", copies.Select(copy => $"{copy.Key} {copy.Value}"));
+
+        private static readonly int intervalMillis = 1000;
+
+        private static readonly int criticalTimeout = 2;
         private const string delimiters = "--------------------------------";
-        private static bool trackedSelf;
 
         static Program()
         {
@@ -59,17 +67,11 @@ namespace UdpMulticast
 
                 groupEndPoint = new IPEndPoint(multicastGroup, port);
                 udpSender.JoinMulticastGroup(multicastGroup, timeToLive: 1);
+                udpReceiver.JoinMulticastGroup(multicastGroup, timeToLive: 1);
 
-               // не работает при закрытии консоли
-               // Process.GetCurrentProcess().Exited += (sender, eventArgs) => { SendMessageToGroup("remove"); };
-
-                Thread receive = new Thread(TrackCondition);
-                receive.Start();
-
-                Thread.Sleep(500);
-
-                Thread send = new Thread(() => { SendMessageToGroup("add"); });
-                send.Start();
+                new Thread(TrackCondition).Start();
+                new Thread(ReceiveNotifications).Start();
+                new Thread(NotifyAboutMe).Start();
 
 
 
@@ -77,21 +79,19 @@ namespace UdpMulticast
                 Console.WriteLine("Press any key to exit...");
                 Console.ReadKey();
 
-                SendMessageToGroup("remove");
-
-                Environment.Exit(0);
+                Environment.Exit(0); 
             }
 
             catch (FormatException e)
             {
-                Console.WriteLine("Exception occured: " + e.Message);
+                Console.WriteLine("Exception occurred: " + e.Message);
                 Console.WriteLine($"{args[0]} is not even an IP address. " +
                                   $"1st parameter to program should be in range from 224.0.0.0 to 239.255.255.255.");
             }
 
             catch (SocketException e)
             {
-                Console.WriteLine("Exception occured: " + e.Message);
+                Console.WriteLine("Exception occurred: " + e.Message);
                 Console.WriteLine($"{args[0]} should be in range from 224.0.0.0 to 239.255.255.255.");
             }
 
@@ -104,55 +104,63 @@ namespace UdpMulticast
 
         }
 
-        public static void SendMessageToGroup(string request)
+        public static void SendMessagesToGroup(string request)
         {
-            byte[] message = Encoding.ASCII.GetBytes($"{request} {myGuid.ToString()}");
-            udpSender.Send(message, message.Length, groupEndPoint);
+            while (true)
+            {
+                byte[] message = Encoding.ASCII.GetBytes($"{request} {myGuid.ToString()}");
+                udpSender.Send(message, message.Length, groupEndPoint);
+                Thread.Sleep(intervalMillis);
+            }
         }
 
-        public static void TrackCondition()
+        public static void NotifyAboutMe() => SendMessagesToGroup("add");
+
+        public static void ReceiveNotifications()
         {
-            udpReceiver.JoinMulticastGroup(multicastGroup, timeToLive: 1);
             while (true)
             {
                 string[] message = Encoding.ASCII.GetString(udpReceiver.Receive(ref remoteEndPoint)).Split(' ');
                 string request = message[0];
                 Guid remoteGuid = Guid.Parse(message[1]);
 
-                if (request == "add" && remoteGuid.Equals(myGuid) && !trackedSelf)
+                if (request == "add")
                 {
-                    trackedSelf = true;
-                    Console.WriteLine(string.Join("\n", GetJoinMessage(remoteGuid), CopiesCountMessage, CopiesListing, delimiters));
-                }
+                    if (!copies.ContainsKey(remoteGuid))
+                    {
+                        copies[remoteGuid] = remoteEndPoint.Address;
+                        Console.WriteLine(string.Join("\n",
+                            GetJoinMessage(remoteGuid), CopiesCountMessage, CopiesListing, delimiters));
+                    }
 
-                else if (request == "add" && !copies.ContainsKey(remoteGuid))
-                {
-                    copies[remoteGuid] = remoteEndPoint.Address;
-                    SendMessageToGroup("add"); //извещаем новую копию о себе
-                    Console.WriteLine(string.Join("\n", GetJoinMessage(remoteGuid), CopiesCountMessage, CopiesListing, delimiters));
-
-                }
-                else if (request == "remove")
-                {
-                    copies.Remove(remoteGuid);
-                    Console.WriteLine(string.Join("\n", GetLeaveMessage(remoteGuid), CopiesCountMessage, CopiesListing, delimiters));
+                    timeouts[remoteGuid] = 0;
 
                 }
             }
         }
 
-        private static IPAddress GetLocalIP()
+        public static void TrackCondition()
         {
-            IPAddress localIP;
-            using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Unspecified))
+            int timeout;
+            IPAddress address;
+
+            while (true)
             {
-                socket.Connect("1.1.1.1", port: 65535);
-                localIP = ((IPEndPoint)socket.LocalEndPoint).Address;
+                foreach (var kvp in timeouts)
+                {
+                    Guid guid = kvp.Key;
+
+                    if (++timeouts[guid] >= criticalTimeout)
+                    {
+                        copies.TryRemove(guid, out address);
+                        timeouts.TryRemove(guid, out timeout);
+                        Console.WriteLine(string.Join("\n",
+                            GetLeaveMessage(guid), CopiesCountMessage, CopiesListing, delimiters));
+                    }
+                }
+                Thread.Sleep(intervalMillis);
+
             }
-
-            return localIP;
         }
-
-
     }
 }
