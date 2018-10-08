@@ -10,7 +10,7 @@ namespace UdpMulticast
         public static IPAddress MulticastGroup = IPAddress.Parse("235.5.5.11"); //default
         public static readonly IPEndPoint LocalEndPoint = new IPEndPoint(IPAddress.Any, Port);
         public static readonly int IntervalMillis = 1000;
-        public static readonly int CriticalTimeout = 2;
+        public static readonly int CriticalNumberOfChecks = 3;
         public const string Delimiters = "--------------------------------";
     }
 

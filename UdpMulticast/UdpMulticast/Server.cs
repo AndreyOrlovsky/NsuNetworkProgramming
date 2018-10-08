@@ -75,7 +75,7 @@ namespace UdpMulticast
                     {
                         Guid guid = kvp.Key;
 
-                        if (++timeouts[guid] >= Parameters.CriticalTimeout)
+                        if (++timeouts[guid] >= Parameters.CriticalNumberOfChecks)
                         {
                             copies.TryRemove(guid, out address);
                             timeouts.TryRemove(guid, out timeout);
