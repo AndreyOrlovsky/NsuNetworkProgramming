@@ -10,7 +10,6 @@ namespace TcpFileTransfer
     {
         static void Main(string[] args)
         {
-
         }
     }
 }
