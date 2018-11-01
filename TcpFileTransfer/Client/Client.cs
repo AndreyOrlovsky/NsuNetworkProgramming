@@ -13,7 +13,6 @@ namespace TcpFileTransfer
         public TcpClient Sender { get; }
 
         private NetworkStream remoteStream;
-        private FileStream fileStream;
         private static readonly int BufferSizeBytes = 1024;
 
         public Client(string serverAddress, int port, string pathToFile)
@@ -22,7 +21,6 @@ namespace TcpFileTransfer
             FileToSend = new FileInfo(pathToFile);
 
             Sender = new TcpClient(serverAddress, port); //connected here
-            new StreamReader(Sender.GetStream());
             remoteStream = Sender.GetStream();
         }
 
@@ -40,11 +38,15 @@ namespace TcpFileTransfer
         {
             byte[] dataBytes = new byte[BufferSizeBytes];
 
-            while (true)
+            using (FileStream reader = new FileStream(FileToSend.FullName,
+                FileMode.Open, FileAccess.Read))
             {
-                if (fileStream.Read(dataBytes, 0, BufferSizeBytes) == 0)
-                    break;
-                remoteStream.Write(dataBytes, 0, BufferSizeBytes);
+                while (true)
+                {
+                    if (reader.Read(dataBytes, 0, BufferSizeBytes) == 0)
+                        break;
+                    remoteStream.Write(dataBytes, 0, BufferSizeBytes);
+                }
             }
 
         }
@@ -59,7 +61,6 @@ namespace TcpFileTransfer
         public void Dispose()
         {
             remoteStream?.Dispose();
-            fileStream?.Dispose();
             Sender?.Dispose();
         }
     }

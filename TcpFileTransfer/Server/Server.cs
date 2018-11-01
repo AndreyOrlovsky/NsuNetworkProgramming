@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace TcpFileTransfer
 {
-    class Server 
+    class Server
     {
         public int Port { get; }
         public TcpListener ClientsAwaiter { get; }
@@ -22,8 +22,8 @@ namespace TcpFileTransfer
             ClientsAwaiter = new TcpListener(IPAddress.Any, port);
         }
 
-        public List<ClientHandler> Clients { get; }
+        public List<ClientHandler> Clients { get; } = new List<ClientHandler>();
 
-        
+
     }
 }

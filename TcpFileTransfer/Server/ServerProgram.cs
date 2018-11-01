@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,7 +11,7 @@ namespace TcpFileTransfer
 {
     static class Locker
     {
-        public static object Lock;
+        public static object Lock = new object();
     }
 
     class ServerProgram
@@ -28,8 +29,8 @@ namespace TcpFileTransfer
                 }
 
                 Console.WriteLine("Listening for clients...");
-
                 var server = new Server(int.Parse(args[0]));
+
                 new Thread(() =>
                 {
                     while (true)
@@ -47,13 +48,13 @@ namespace TcpFileTransfer
                                     client.TotalReceived / (DateTime.Now - client.InstantCheckMoment)
                                     .TotalMilliseconds;
                                 var sb = new StringBuilder();
-                                sb.Append($"{i})")
+                                sb.Append($"{i+1})")
                                     .Append($" File {client.FileToReceive.Name}")
                                     .Append($" with size {client.FileSize}")
                                     .Append($" from {client.FileSender.Client.RemoteEndPoint}")
-                                    .Append($" has average speed {averageSpeed}")
-                                    .Append($" and instant speed {instantSpeed}")
-                                    .Append($" (received by {client.FileSize / client.TotalReceived}");
+                                    .Append($" has average speed {averageSpeed:0.00}")
+                                    .Append($" and instant speed {instantSpeed:0.00}")
+                                    .Append($" (received by { client.TotalReceived / client.FileSize}%)");
                                 Console.WriteLine(sb.ToString() + '\n');
                                 lock (Locker.Lock)
                                 {
@@ -67,6 +68,9 @@ namespace TcpFileTransfer
                     }
 
                 }).Start();
+
+                server.ClientsAwaiter.Start();
+
                 while (true)
                 {
                     if (server.ClientsAwaiter.Pending())
