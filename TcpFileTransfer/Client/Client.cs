@@ -8,7 +8,7 @@ namespace TcpFileTransfer
 {
     class Client : IDisposable
     {
-        public const int BufferSizeBytes = 4096;
+        public const int BufferSizeBytes = 256;
 
         public int Port { get; }
         public FileInfo FileToSend { get; }
@@ -46,7 +46,7 @@ namespace TcpFileTransfer
                     int bytesRead = reader.Read(buffer, offset: 0, count: Client.BufferSizeBytes);
                     if (bytesRead == 0)
                         break;
-                    remoteStream.Write(buffer, offset: 0, size: bytesRead);
+                    remoteStream.Write(buffer, offset: 0, size: buffer.Length);
                 }
             }
 

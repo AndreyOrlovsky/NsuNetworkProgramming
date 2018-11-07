@@ -62,7 +62,7 @@ namespace TcpFileTransfer
             using (FileStream writer = new FileStream(PathToFile,
                 FileMode.Create, FileAccess.Write))
             {
-                while (true)
+                while (remoteStream.DataAvailable)
                 {
                     int bytesReceived = remoteStream.Read(buffer, offset: 0, size: buffer.Length);
 
@@ -72,6 +72,7 @@ namespace TcpFileTransfer
                     }
 
                     writer.Write(buffer, offset: 0, count: bytesReceived);
+                    
 
                     TotalReceived += bytesReceived;
                     lock (Locker.Lock)
@@ -79,8 +80,10 @@ namespace TcpFileTransfer
                         InstantReceived += bytesReceived;
                     }
                 }
+
+
             }
-            
+
         }
 
         public void SendResponse(byte code)

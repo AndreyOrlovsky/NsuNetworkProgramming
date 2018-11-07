@@ -11,7 +11,7 @@ namespace TcpFileTransfer
 {
     class Server
     {
-        public const int BufferSizeBytes = 4096;
+        public const int BufferSizeBytes = 2048;
 
         public int Port { get; }
         public TcpListener ClientsAwaiter { get; }
@@ -26,36 +26,40 @@ namespace TcpFileTransfer
 
         public void PrintCurrentReceivingStatistics()
         {
-            if (this.clients.Any())
+            lock (clients)
             {
-                for (var i = 0; i < this.clients.Count; i++)
+                if (clients.Any())
                 {
-                    var client = this.clients[i];
-
-                    var averageSpeed =
-                        client.TotalReceived / (DateTime.Now - client.ReceiveStartedMoment)
-                        .TotalMilliseconds;
-
-                    var instantSpeed =
-                        client.InstantReceived / (DateTime.Now - client.InstantCheckMoment)
-                        .TotalMilliseconds;
-
-                    var sb = new StringBuilder();
-                    sb.Append($"{i + 1})")
-                        .Append($" File {client.FileToReceive.Name}")
-                        .Append($" with size {client.FileSize}")
-                        .Append($" from {client.FileSender.Client.RemoteEndPoint}")
-                        .Append($" has average speed {averageSpeed:F2}")
-                        .Append($" and instant speed {instantSpeed:F2}")
-                        .Append($" (received by {client.TotalReceived / client.FileSize:P}%)");
-
-                    Console.WriteLine(sb.ToString() + '\n');
-
-                    lock (Locker.Lock)
+                    for (var i = 0; i < this.clients.Count; i++)
                     {
-                        client.InstantCheckMoment = DateTime.Now;
-                        client.InstantReceived = 0;
+                        var client = this.clients[i];
+
+                        var averageSpeed =
+                            client.TotalReceived / (DateTime.Now - client.ReceiveStartedMoment)
+                            .TotalMilliseconds;
+
+                        var instantSpeed =
+                            client.InstantReceived / (DateTime.Now - client.InstantCheckMoment)
+                            .TotalMilliseconds;
+
+                        var sb = new StringBuilder();
+                        sb.Append($"{i + 1})")
+                            .Append($" File {client.FileToReceive.Name}")
+                            .Append($" with size {client.FileSize}")
+                            .Append($" from {client.FileSender.Client.RemoteEndPoint}")
+                            .Append($" has average speed {averageSpeed:F2}")
+                            .Append($" and instant speed {instantSpeed:F2}")
+                            .Append($" (received by {client.TotalReceived / client.FileSize:P}%)");
+
+                        Console.WriteLine(sb.ToString() + '\n');
+
+                        lock (Locker.Lock)
+                        {
+                            client.InstantCheckMoment = DateTime.Now;
+                            client.InstantReceived = 0;
+                        }
                     }
+                    
                 }
             }
         }
@@ -67,24 +71,35 @@ namespace TcpFileTransfer
             {
                 clientHandler
                     = new ClientHandler(this.ClientsAwaiter.AcceptTcpClient());
-                this.clients.Add(clientHandler);
+
+                if (File.Exists(clientHandler.PathToFile))
+                {
+                    clientHandler.SendResponse(ResponseCodes.FileAlreadyExists);
+                    return;
+                }
+
+                lock (clients)
+                {
+                    clients.Add(clientHandler);
+                }
 
                 clientHandler.ReceiveInfo();
 
-                if (File.Exists(clientHandler.PathToFile))
-                    clientHandler.SendResponse(ResponseCodes.FileAlreadyExists);
+                
 
                 clientHandler.SendResponse(ResponseCodes.SendingFile);
 
 
                 clientHandler.ReceiveFile();
 
-                clientHandler.SendResponse(ResponseCodes.FileSent);
-
-                lock (Locker.Lock)
+                lock (clients)
                 {
                     clients.Remove(clientHandler);
                 }
+
+                clientHandler.SendResponse(ResponseCodes.FileSent);
+
+                
 
             }
 
