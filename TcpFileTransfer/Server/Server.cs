@@ -72,6 +72,9 @@ namespace TcpFileTransfer
                 clientHandler
                     = new ClientHandler(this.ClientsAwaiter.AcceptTcpClient());
 
+
+                clientHandler.ReceiveInfo();
+
                 if (File.Exists(clientHandler.PathToFile))
                 {
                     clientHandler.SendResponse(ResponseCodes.FileAlreadyExists);
@@ -83,13 +86,8 @@ namespace TcpFileTransfer
                     clients.Add(clientHandler);
                 }
 
-                clientHandler.ReceiveInfo();
-
-                
-
                 clientHandler.SendResponse(ResponseCodes.SendingFile);
-
-
+                
                 clientHandler.ReceiveFile();
 
                 lock (clients)
@@ -99,13 +97,11 @@ namespace TcpFileTransfer
 
                 clientHandler.SendResponse(ResponseCodes.FileSent);
 
-                
-
             }
 
             catch (Exception e)
             {
-                Console.WriteLine("Exception caught: " + e.Message);
+                Console.WriteLine("Exception caught: " + e);
                 clientHandler.SendResponse(ResponseCodes.ErrorOccurred);
             }
         }

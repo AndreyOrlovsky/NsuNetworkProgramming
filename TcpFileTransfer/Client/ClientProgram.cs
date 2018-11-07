@@ -51,7 +51,7 @@ namespace TcpFileTransfer
 
             catch (Exception e)
             {
-                Console.WriteLine("Exception occurred: " + e.Message);
+                Console.WriteLine("Exception occurred: " + e);
             }
         }
     }
