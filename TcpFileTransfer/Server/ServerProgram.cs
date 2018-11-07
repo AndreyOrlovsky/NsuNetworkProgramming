@@ -11,7 +11,7 @@ namespace TcpFileTransfer
 {
     static class Locker
     {
-        public static object Lock = new object();
+        public static readonly object Lock = new object();
     }
 
     class ServerProgram
@@ -29,42 +29,14 @@ namespace TcpFileTransfer
                 }
 
                 Console.WriteLine("Listening for clients...");
-                var server = new Server(int.Parse(args[0]));
+                var server = new Server(port: int.Parse(args[0]));
 
                 new Thread(() =>
                 {
                     while (true)
                     {
                         Thread.Sleep(SleepTimeout);
-                        if (server.Clients.Any())
-                        {
-                            for (var i = 0; i < server.Clients.Count; i++)
-                            {
-                                var client = server.Clients[i];
-                                var averageSpeed =
-                                    client.TotalReceived / (DateTime.Now - client.ReceiveStartedMoment)
-                                    .TotalMilliseconds;
-                                var instantSpeed =
-                                    client.TotalReceived / (DateTime.Now - client.InstantCheckMoment)
-                                    .TotalMilliseconds;
-                                var sb = new StringBuilder();
-                                sb.Append($"{i+1})")
-                                    .Append($" File {client.FileToReceive.Name}")
-                                    .Append($" with size {client.FileSize}")
-                                    .Append($" from {client.FileSender.Client.RemoteEndPoint}")
-                                    .Append($" has average speed {averageSpeed:0.00}")
-                                    .Append($" and instant speed {instantSpeed:0.00}")
-                                    .Append($" (received by { client.TotalReceived / client.FileSize}%)");
-                                Console.WriteLine(sb.ToString() + '\n');
-                                lock (Locker.Lock)
-                                {
-                                    client.InstantCheckMoment = DateTime.Now;
-                                    client.InstantReceived = 0;
-                                }
-
-                            }
-                        }
-
+                        server.PrintCurrentReceivingStatistics();
                     }
 
                 }).Start();
@@ -75,42 +47,16 @@ namespace TcpFileTransfer
                 {
                     if (server.ClientsAwaiter.Pending())
                     {
-                        new Thread(() =>
-                        {
-                            ClientHandler clientHandler = null;
-                            try
-                            {
-                                clientHandler
-                                   = new ClientHandler(server.ClientsAwaiter.AcceptTcpClient());
-                                server.Clients.Add(clientHandler);
-
-                                clientHandler.ReceiveInfo();
-
-                                if (File.Exists(clientHandler.PathToFile))
-                                    clientHandler.SendResponse(ResponseCodes.FileAlreadyExists);
-
-                                clientHandler.SendResponse(ResponseCodes.SendingFile);
-
-
-                                clientHandler.ReceiveFile();
-
-                                clientHandler.SendResponse(ResponseCodes.FileSent);
-                            }
-                            catch (Exception exp)
-                            {
-                                Console.WriteLine("Exception caught: " + exp.Message);
-                                clientHandler.SendResponse(ResponseCodes.ErrorOccurred);
-                            }
-
-                        }).Start();
+                        new Thread(server.HandleConnection).Start();
                     }
                 }
             }
 
-            catch (Exception exp)
+            catch (Exception e)
             {
-                Console.WriteLine("Exception caught: " + exp.Message);
+                Console.WriteLine("Exception caught: " + e.Message);
             }
         }
+
     }
 }

@@ -37,22 +37,21 @@ namespace TcpFileTransfer
 
                     switch (client.ReceiveServerResponse())
                     {
-                        case 20:
+                        case ResponseCodes.FileSent:
                             Console.WriteLine("File successfully sent.");
                             break;
-                        case 21:
+                        case ResponseCodes.ErrorOccurred:
                             Console.WriteLine("Error while sending file.");
                             break;
-
                     }
 
                 }
             }
 
 
-            catch (Exception exp)
+            catch (Exception e)
             {
-                Console.WriteLine("Exception occurred: " + exp);
+                Console.WriteLine("Exception occurred: " + e.Message);
             }
         }
     }

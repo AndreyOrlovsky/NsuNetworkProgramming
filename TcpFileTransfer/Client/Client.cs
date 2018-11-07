@@ -8,13 +8,13 @@ namespace TcpFileTransfer
 {
     class Client : IDisposable
     {
+        public const int BufferSizeBytes = 4096;
+
         public int Port { get; }
         public FileInfo FileToSend { get; }
         public TcpClient Sender { get; }
 
         private NetworkStream remoteStream;
-        private static readonly int BufferSizeBytes = 1024;
-
         public Client(string serverAddress, int port, string pathToFile)
         {
             Port = port;
@@ -36,16 +36,17 @@ namespace TcpFileTransfer
 
         public void SendFile()
         {
-            byte[] dataBytes = new byte[BufferSizeBytes];
+            byte[] buffer = new byte[BufferSizeBytes];
 
             using (FileStream reader = new FileStream(FileToSend.FullName,
                 FileMode.Open, FileAccess.Read))
             {
                 while (true)
                 {
-                    if (reader.Read(dataBytes, 0, BufferSizeBytes) == 0)
+                    int bytesRead = reader.Read(buffer, offset: 0, count: Client.BufferSizeBytes);
+                    if (bytesRead == 0)
                         break;
-                    remoteStream.Write(dataBytes, 0, BufferSizeBytes);
+                    remoteStream.Write(buffer, offset: 0, size: bytesRead);
                 }
             }
 
