@@ -9,12 +9,12 @@ using System.Threading.Tasks;
 
 namespace TcpFileTransfer
 {
-    static class Locker
+    static class Lockers
     {
-        public static readonly object Lock = new object();
+        public static readonly object InstantStatistics = new object();
     }
 
-    class ServerProgram
+    static class ServerProgram
     {
         public static readonly TimeSpan SleepTimeout = TimeSpan.FromSeconds(3);
 

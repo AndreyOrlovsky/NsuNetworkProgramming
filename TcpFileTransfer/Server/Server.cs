@@ -45,21 +45,21 @@ namespace TcpFileTransfer
                         var sb = new StringBuilder();
                         sb.Append($"{i + 1})")
                             .Append($" File {client.FileToReceive.Name}")
-                            .Append($" with size {client.FileSize}")
+                            .Append($" with size {client.FileSize} bytes")
                             .Append($" from {client.FileSender.Client.RemoteEndPoint}")
-                            .Append($" has average speed {averageSpeed:F2}")
-                            .Append($" and instant speed {instantSpeed:F2}")
-                            .Append($" (received by {client.TotalReceived / client.FileSize:P}%)");
+                            .Append($" has average speed {averageSpeed:F5} b/s")
+                            .Append($" and instant speed {instantSpeed:F5} b/s")
+                            .Append($" (received by {client.TotalReceived / (double)client.FileSize:P})");
 
                         Console.WriteLine(sb.ToString() + '\n');
 
-                        lock (Locker.Lock)
+                        lock (Lockers.InstantStatistics)
                         {
                             client.InstantCheckMoment = DateTime.Now;
                             client.InstantReceived = 0;
                         }
                     }
-                    
+
                 }
             }
         }
@@ -69,8 +69,7 @@ namespace TcpFileTransfer
             ClientHandler clientHandler = null;
             try
             {
-                clientHandler
-                    = new ClientHandler(this.ClientsAwaiter.AcceptTcpClient());
+                clientHandler = new ClientHandler(this.ClientsAwaiter.AcceptTcpClient());
 
 
                 clientHandler.ReceiveInfo();
@@ -87,7 +86,7 @@ namespace TcpFileTransfer
                 }
 
                 clientHandler.SendResponse(ResponseCodes.SendingFile);
-                
+
                 clientHandler.ReceiveFile();
 
                 lock (clients)

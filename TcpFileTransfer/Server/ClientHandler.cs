@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace TcpFileTransfer
@@ -37,7 +38,7 @@ namespace TcpFileTransfer
 
             Folder = $"uploads\\{remoteEndPoint.Address}";
             Directory.CreateDirectory(Folder);
-            
+
 
         }
 
@@ -63,22 +64,27 @@ namespace TcpFileTransfer
             using (FileStream writer = new FileStream(PathToFile,
                 FileMode.Create, FileAccess.Write))
             {
-                while (remoteStream.DataAvailable)
+                var random = new  Random();
+                while (TotalReceived < FileSize)
                 {
-                    int bytesReceived = remoteStream.Read(buffer, offset: 0, size: buffer.Length);
-
-                    if (bytesReceived == 0)
+                    if (remoteStream.DataAvailable)
                     {
-                        break;
-                    }
+                        int bytesReceived = remoteStream.Read(buffer, offset: 0, size: buffer.Length);
 
-                    writer.Write(buffer, offset: 0, count: bytesReceived);
-                    
+                        if (bytesReceived == 0)
+                        {
+                            break;
+                        }
 
-                    TotalReceived += bytesReceived;
-                    lock (Locker.Lock)
-                    {
-                        InstantReceived += bytesReceived;
+                        writer.Write(buffer, offset: 0, count: bytesReceived);
+
+                        Thread.Sleep(random.Next(0, 5)); // имитация задержки 
+
+                        TotalReceived += bytesReceived;
+                        lock (Lockers.InstantStatistics)
+                        {
+                            InstantReceived += bytesReceived;
+                        }
                     }
                 }
 
@@ -89,8 +95,8 @@ namespace TcpFileTransfer
 
         public void SendResponse(byte code)
         {
-            byte[] buffer = new byte[1] { code };
-            remoteStream.Write(buffer, offset: 0, size: buffer.Length);
+            byte[] localBuffer = { code };
+            remoteStream.Write(localBuffer, offset: 0, size: localBuffer.Length);
         }
     }
 }
