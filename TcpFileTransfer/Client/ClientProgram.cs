@@ -26,8 +26,9 @@ namespace TcpFileTransfer
                             break;
                         case ResponseCodes.FileAlreadyExists:
                             Console.WriteLine("File with this name already exists." +
-                                              "Choose different name.");
-                            break;
+                                              " Choose different name.");
+
+                            return;
                         case ResponseCodes.ServerTooBusy:
                             Console.WriteLine("Server is too busy.");
                             break;

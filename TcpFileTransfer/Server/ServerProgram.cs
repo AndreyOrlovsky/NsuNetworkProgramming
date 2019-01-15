@@ -16,7 +16,7 @@ namespace TcpFileTransfer
 
     static class ServerProgram
     {
-        public static readonly TimeSpan SleepTimeout = TimeSpan.FromSeconds(3);
+        public static readonly TimeSpan SleepTimeout = TimeSpan.FromSeconds(2);
 
         static void Main(string[] args)
         {

@@ -28,39 +28,37 @@ namespace TcpFileTransfer
         {
             lock (clients)
             {
-                if (clients.Any())
+                var infoBuilder = new StringBuilder();
+
+                for (var i = 0; i < this.clients.Count; i++)
                 {
-                    for (var i = 0; i < this.clients.Count; i++)
+                    var client = this.clients[i];
+
+                    var averageSpeed = client.TotalReceived /
+                                       (DateTime.Now - client.ReceiveStartedMoment).TotalMilliseconds;
+
+                    var instantSpeed = client.InstantReceived /
+                                       (DateTime.Now - client.InstantCheckMoment).TotalMilliseconds;
+
+                    infoBuilder.Append($"{i + 1})")
+                        .Append($" File {client.FileToReceive.Name}")
+                        .Append($" with size {client.FileSize} bytes")
+                        .Append($" from {client.FileSender.Client.RemoteEndPoint}")
+                        .Append($" has average speed {averageSpeed:F5} b/s")
+                        .Append($" and instant speed {instantSpeed:F5} b/s")
+                        .Append($" (received by {client.TotalReceived / (double)client.FileSize:P}).")
+                        .AppendLine();
+
+                    lock (Lockers.InstantStatistics)
                     {
-                        var client = this.clients[i];
-
-                        var averageSpeed =
-                            client.TotalReceived / (DateTime.Now - client.ReceiveStartedMoment)
-                            .TotalMilliseconds;
-
-                        var instantSpeed =
-                            client.InstantReceived / (DateTime.Now - client.InstantCheckMoment)
-                            .TotalMilliseconds;
-
-                        var sb = new StringBuilder();
-                        sb.Append($"{i + 1})")
-                            .Append($" File {client.FileToReceive.Name}")
-                            .Append($" with size {client.FileSize} bytes")
-                            .Append($" from {client.FileSender.Client.RemoteEndPoint}")
-                            .Append($" has average speed {averageSpeed:F5} b/s")
-                            .Append($" and instant speed {instantSpeed:F5} b/s")
-                            .Append($" (received by {client.TotalReceived / (double)client.FileSize:P})");
-
-                        Console.WriteLine(sb.ToString() + '\n');
-
-                        lock (Lockers.InstantStatistics)
-                        {
-                            client.InstantCheckMoment = DateTime.Now;
-                            client.InstantReceived = 0;
-                        }
+                        client.InstantCheckMoment = DateTime.Now;
+                        client.InstantReceived = 0;
                     }
-
                 }
+
+                Console.Clear();
+                Console.Write(infoBuilder.ToString());
+                infoBuilder.Clear();
             }
         }
 
@@ -70,7 +68,6 @@ namespace TcpFileTransfer
             try
             {
                 clientHandler = new ClientHandler(this.ClientsAwaiter.AcceptTcpClient());
-
 
                 clientHandler.ReceiveInfo();
 
@@ -95,16 +92,13 @@ namespace TcpFileTransfer
                 }
 
                 clientHandler.SendResponse(ResponseCodes.FileSent);
-
             }
 
             catch (Exception e)
             {
-                Console.WriteLine("Exception caught: " + e);
+                Console.WriteLine("Exception caught: " + e.Message);
                 clientHandler.SendResponse(ResponseCodes.ErrorOccurred);
             }
         }
-
     }
-
 }
