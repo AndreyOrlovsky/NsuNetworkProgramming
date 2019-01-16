@@ -73,13 +73,13 @@ namespace TreeChat
             receiveTask = RunTask(KeepReceiving);
         }
 
-        private Task RunTask(Func<Task> Function)
+        private Task RunTask(Func<Task> function)
         {
             return Task.Run(async () =>
             {
                 try
                 {
-                    await Function();
+                    await function();
                 }
 
                 catch (Exception e) when (!(e is OperationCanceledException))
@@ -214,7 +214,7 @@ namespace TreeChat
 
                 if (new Random().Next(100) < lossPercent)
                 {
-                    //Console.WriteLine($"[Error]: Lost packed from {packet.RemoteEndPoint}");
+                    Console.WriteLine($"<<< Simulating packet loss from {packet.RemoteEndPoint} >>>");
                     continue;
                 }
 

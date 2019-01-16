@@ -35,7 +35,7 @@ namespace TreeChat
                 // Process.GetCurrentProcess().Exited += (sender, eventArgs) => chat.InformAboutExit();
 
                 string text;
-                while ((text = Console.ReadLine()) != @"\quit")
+                while ((text = Console.ReadLine()) != @"/quit")
                 {
                      chat.SendMessage(text);
                 }

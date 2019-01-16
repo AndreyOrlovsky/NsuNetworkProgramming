@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.28010.2048
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TreeChat", "TreeChat\TreeChat.csproj", "{C8289238-6B22-4A12-B238-2AD96CD945B7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutomatedTesting", "AutomatedTesting\AutomatedTesting.csproj", "{931BB4D4-8F1A-44C2-ADC9-E45E60F08A50}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{C8289238-6B22-4A12-B238-2AD96CD945B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C8289238-6B22-4A12-B238-2AD96CD945B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C8289238-6B22-4A12-B238-2AD96CD945B7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{931BB4D4-8F1A-44C2-ADC9-E45E60F08A50}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{931BB4D4-8F1A-44C2-ADC9-E45E60F08A50}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{931BB4D4-8F1A-44C2-ADC9-E45E60F08A50}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{931BB4D4-8F1A-44C2-ADC9-E45E60F08A50}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
