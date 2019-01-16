@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace DataTransferObjects
+namespace SharedData
 {
     public class MessagesListRequestData
     {

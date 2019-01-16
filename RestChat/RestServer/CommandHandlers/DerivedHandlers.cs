@@ -1,17 +1,15 @@
 ﻿using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
-using DataTransferObjects;
+using SharedData;
 
 namespace RestServer.CommandHandlers
 {
     public class LoginHandler : GenericHandler<LoginRequestData, LoginResponseData>
     {
-        private readonly UsersController usersController;
 
         public LoginHandler(UsersController usersController) : base(usersController)
         {
-            this.usersController = usersController;
         }
 
         public override Regex RelativeUriPattern => new Regex("^/login$");
@@ -33,11 +31,9 @@ namespace RestServer.CommandHandlers
 
     public class LogoutHandler : GenericHandler<LogoutRequestData, LogoutResponseData>
     {
-        private readonly UsersController usersController;
 
         public LogoutHandler(UsersController usersController) : base(usersController)
         {
-            this.usersController = usersController;
         }
 
         public override Regex RelativeUriPattern => new Regex("^/logout$");
@@ -148,11 +144,9 @@ namespace RestServer.CommandHandlers
 
     public class UserInfoHandler : GenericHandler<UserInfoRequestData, UserInfoResponseData>
     {
-        private readonly UsersController usersController;
 
         public UserInfoHandler(UsersController usersController) : base(usersController)
         {
-            this.usersController = usersController;
         }
 
         public override Regex RelativeUriPattern => new Regex("^/users/(\\d+)$");
@@ -180,11 +174,9 @@ namespace RestServer.CommandHandlers
 
     public class UsersListHandler : GenericHandler<UserListRequestData, UserListResponseData>
     {
-        private readonly UsersController usersController;
 
         public UsersListHandler(UsersController usersController) : base(usersController)
         {
-            this.usersController = usersController;
         }
 
         public override Regex RelativeUriPattern => new Regex("^/users$");
