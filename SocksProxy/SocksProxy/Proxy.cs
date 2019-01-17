@@ -46,10 +46,12 @@ namespace SocksProxy
         {
             byte[] request = new byte[BufferSize];
             ;
-            Socket listener = (Socket)ar.AsyncState;
-            listener.BeginAccept(AcceptCallback, listener);
+            Socket clientsAwaiter = (Socket)ar.AsyncState;
 
-            Socket client = listener.EndAccept(ar);
+            // слушаем новых клиентов
+            clientsAwaiter.BeginAccept(AcceptCallback, clientsAwaiter);
+
+            Socket client = clientsAwaiter.EndAccept(ar);
             Socket remote = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
             client.Receive(request, 0, request.Length, SocketFlags.None);
@@ -92,9 +94,10 @@ namespace SocksProxy
             client.Send(response, 0, BufferSize, SocketFlags.None);
 
 
-            ProxyPair pair = new ProxyPair(client, remote, request);
-            remote.BeginReceive(request, 0, request.Length, SocketFlags.None, RemoteCallback, pair);
-            client.BeginReceive(request, 0, request.Length, SocketFlags.None, ClientCallback, pair);
+            byte[] buffer = new byte[BufferSize];
+            ProxyPair pair = new ProxyPair(client, remote, buffer);
+            remote.BeginReceive(buffer, 0, request.Length, SocketFlags.None, RemoteCallback, pair);
+            client.BeginReceive(buffer, 0, request.Length, SocketFlags.None, ClientCallback, pair);
         }
 
         private IPEndPoint GetEndPoint(in byte[] request)
@@ -110,8 +113,8 @@ namespace SocksProxy
                 //пришёл url
                 case 3:
 
-                    /* VER	CMD	RSV	ATYP	        DST.ADDR	            DST.PORT
-                        5    1   ?    3   [length (1 byte)][hostname]      0 80 (2 bytes) */
+                 /* VER	    CMD	     RSV	    ATYP	          DST.ADDR	               DST.PORT
+                     5        1       0          3      [length (1 byte)][hostname]      0 80 (2 bytes) */
                     byte hostnameLength = request[4];
 
                     string host = Encoding.ASCII.GetString(request, 5, hostnameLength);
